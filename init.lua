@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -102,7 +102,10 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
+vim.o.tabstop = 2
+vim.o.softtabstop = 2
+vim.o.shiftwidth = 2
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -284,6 +287,27 @@ require('lazy').setup({
     },
   },
 
+  {
+    'OXY2DEV/markview.nvim',
+    lazy = false,
+  },
+
+  {
+    'kndndrj/nvim-dbee',
+    dependencies = {
+      'MunifTanjim/nui.nvim',
+    },
+    build = function()
+      -- Install tries to automatically detect the install method.
+      -- if it fails, try calling it with one of these parameters:
+      --    "curl", "wget", "bitsadmin", "go"
+      require('dbee').install()
+    end,
+    config = function()
+      require('dbee').setup(--[[optional config]])
+    end,
+  },
+
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
   -- This is often very useful to both group configuration, as well as handle
@@ -459,6 +483,69 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sn', function()
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
+    end,
+  },
+  { -- File Explorer
+    'nvim-tree/nvim-tree.lua',
+    lazy = false, -- Load on startup
+    dependencies = {
+      'nvim-tree/nvim-web-devicons', -- Required for file icons (make sure to set vim.g.have_nerd_font = true)
+    },
+    cmd = { 'NvimTreeToggle', 'NvimTreeOpen', 'NvimTreeFocus' },
+    keys = {
+      {
+        '<leader>e',
+        '<cmd>NvimTreeToggle<CR>',
+        desc = '[E]xplore Project',
+      },
+    },
+    opts = {
+      disable_netrw = true,
+      hijack_netrw = true,
+      update_focused_file = {
+        enable = true,
+        update_root = true,
+      },
+      filters = {
+        dotfiles = false, -- Change to true to hide dotfiles
+      },
+      git = {
+        ignore = false,
+      },
+      view = {
+        width = 30,
+        relativenumber = false,
+      },
+    },
+  },
+
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = function()
+      require('nvim-autopairs').setup {
+        -- Your custom settings here, e.g.:
+        -- fast_wrap = {},
+        -- check_ts = true,
+        -- ts_config = {
+        --   lua = { "string", "source" },
+        --   javascript = { "string", "template_string" },
+        -- },
+      }
+    end,
+  },
+
+  -- Add these lines to your plugins table in init.lua
+  {
+    'windwp/nvim-ts-autotag',
+    ft = { 'html', 'javascript', 'typescript', 'tsx', 'jsx', 'svelte', 'xml', 'vue' }, -- Only load for specific file types
+    config = function()
+      require('nvim-ts-autotag').setup {
+        opts = {
+          enable_close = true, -- Auto close tags
+          enable_rename = true, -- Auto rename pair of tags
+        },
+      }
     end,
   },
 
@@ -672,8 +759,8 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         -- clangd = {},
-        -- gopls = {},
-        -- pyright = {},
+        gopls = {},
+        pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -681,7 +768,7 @@ require('lazy').setup({
         --    https://github.com/pmizio/typescript-tools.nvim
         --
         -- But for many setups, the LSP (`ts_ls`) will work just fine
-        -- ts_ls = {},
+        ts_ls = {},
         --
 
         lua_ls = {
@@ -944,7 +1031,23 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'css',
+        'javascript',
+        'typescript',
+        'vue',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
