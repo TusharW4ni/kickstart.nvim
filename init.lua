@@ -760,7 +760,13 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         gopls = {},
-        pyright = {},
+        pyright = {
+          settings = {
+            python = {
+              pythonPath = '/Users/tushar/.local/share/uv/python/cpython-3.12.12-macos-aarch64-none/bin/python3.12',
+            },
+          },
+        },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -856,10 +862,10 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'isort', 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -1028,37 +1034,49 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
-    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
+    event = { 'BufReadPost', 'BufNewFile' },
+    dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
+    config = function()
+      require('nvim-treesitter.configs').setup {
+        ensure_installed = { 'lua', 'python', 'javascript', 'typescript', 'html', 'css', 'vimdoc', 'vim' },
+        sync_install = false,
+        auto_install = true,
+        highlight = { enable = true },
+        indent = { enable = true },
+        textobjects = { enable = true },
+      }
+    end,
+    --main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      ensure_installed = {
-        'bash',
-        'c',
-        'diff',
-        'html',
-        'css',
-        'javascript',
-        'typescript',
-        'vue',
-        'lua',
-        'luadoc',
-        'markdown',
-        'markdown_inline',
-        'query',
-        'vim',
-        'vimdoc',
-      },
-      -- Autoinstall languages that are not installed
-      auto_install = true,
-      highlight = {
-        enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = { 'ruby' },
-      },
-      indent = { enable = true, disable = { 'ruby' } },
-    },
+    --opts = {
+    --  ensure_installed = {
+    --    'bash',
+    --    'c',
+    --    'diff',
+    --    'html',
+    --    'css',
+    --    'javascript',
+    --    'typescript',
+    --    'vue',
+    --    'lua',
+    --    'luadoc',
+    --    'markdown',
+    --    'markdown_inline',
+    --    'query',
+    --    'vim',
+    --    'vimdoc',
+    --  },
+    --  -- Autoinstall languages that are not installed
+    --  auto_install = true,
+    --  highlight = {
+    --    enable = true,
+    --    -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
+    --    --  If you are experiencing weird indenting issues, add the language to
+    --    --  the list of additional_vim_regex_highlighting and disabled languages for indent.
+    --    additional_vim_regex_highlighting = { 'ruby' },
+    --  },
+    --  indent = { enable = true, disable = { 'ruby' } },
+    --},
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
     --
@@ -1066,7 +1084,85 @@ require('lazy').setup({
     --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
     --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
   },
+  { -- Autocompletion framework
+    'hrsh7th/nvim-cmp',
+    dependencies = {
+      'saadparwaiz1/cmp_luasnip', -- Snippet support
+      'hrsh7th/cmp-nvim-lsp', -- LSP source
+      'hrsh7th/cmp-buffer', -- Buffer source
+      'hrsh7th/cmp-path', -- Path source
+    },
+    config = function()
+      local cmp = require 'cmp'
+      local luasnip = require 'luasnip'
 
+      cmp.setup {
+        sources = cmp.config.sources {
+          { name = 'nvim_lsp' },
+          { name = 'luasnip' },
+          { name = 'buffer' },
+          { name = 'path' },
+        },
+        snippet = {
+          expand = function(args)
+            luasnip.lsp_expand(args.body)
+          end,
+        },
+        mapping = cmp.mapping.preset.insert {
+          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+          ['<C-f>'] = cmp.mapping.scroll_docs(4),
+          ['<C-Space>'] = cmp.mapping.complete(),
+          ['<CR>'] = cmp.mapping.confirm { select = true }, -- Accept currently selected item.
+          ['<S-CR>'] = cmp.mapping.confirm { select = false }, -- Accept selected item without auto-select
+          ['<Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then
+              luasnip.expand_or_jump()
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
+          ['<S-Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item()
+            elseif luasnip.jumpable(-1) then
+              luasnip.jump(-1)
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
+        },
+      }
+    end,
+  },
+  { 'L3MON4D3/LuaSnip' }, -- Snippet Engine
+  { -- Statusline/Tabline
+    'nvim-lualine/lualine.nvim',
+    opts = {
+      options = {
+        icons_enabled = vim.g.have_nerd_font,
+        theme = 'auto',
+        component_separators = { left = '', right = '' },
+        section_separators = { left = '', right = '' },
+        disabled_filetypes = {
+          statusline = {},
+          winbar = {},
+        },
+        ignore_focus = {},
+        always_divide_middle = true,
+        globalstatus = false,
+      },
+      sections = {
+        lualine_a = { 'mode' },
+        lualine_b = { 'branch', 'diff', 'diagnostics' },
+        lualine_c = { 'filename' },
+        lualine_x = { 'encoding', 'fileformat', 'filetype' },
+        lualine_y = { 'progress' },
+        lualine_z = { 'location' },
+      },
+    },
+  },
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
